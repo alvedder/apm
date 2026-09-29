@@ -430,11 +430,14 @@ def _discover_installed_runtimes(project_root_path, *, user_scope: bool) -> list
     to a binary/directory probe when optional deps are unavailable.
     """
     from apm_cli.integration.mcp_integrator import _is_vscode_available
+    from apm_cli.integration.targets import KNOWN_TARGETS
 
-    # Directory-signal opt-in runtimes: name -> required project dir.
+    # Directory-signal opt-in runtimes: name -> required dir under the scope
+    # root.  OpenCode's user root (~/.config/opencode) differs from its
+    # project marker, so its signal comes from the target profile.
     dir_signal = {
         "cursor": ".cursor",
-        "opencode": ".opencode",
+        "opencode": KNOWN_TARGETS["opencode"].effective_root(user_scope),
         "gemini": ".gemini",
         "windsurf": ".windsurf",
         "kiro": ".kiro",
@@ -507,12 +510,14 @@ def _discover_installed_runtimes_fallback(
     project_root_path, _is_vscode_available, *, user_scope: bool
 ) -> list[str]:
     """Binary/directory-only runtime probe used when adapters fail to import."""
+    from apm_cli.integration.targets import KNOWN_TARGETS
+
     installed_runtimes = [rt for rt in ["copilot", "codex"] if find_runtime_binary(rt) is not None]
     if _is_vscode_available(project_root=project_root_path):
         installed_runtimes.append("vscode")
     for name, signal in (
         ("cursor", ".cursor"),
-        ("opencode", ".opencode"),
+        ("opencode", KNOWN_TARGETS["opencode"].effective_root(user_scope)),
         ("gemini", ".gemini"),
         ("windsurf", ".windsurf"),
         ("kiro", ".kiro"),
@@ -910,7 +915,7 @@ def _resolve_target_runtimes(
             logger.warning(msg)
         if not target_runtimes:
             logger.warning(
-                "No runtimes support user-scope MCP installation (supported: Copilot CLI, Claude Code, Codex CLI, Gemini CLI, Antigravity CLI, Hermes, Kiro, Windsurf, JetBrains Copilot)"
+                "No runtimes support user-scope MCP installation (supported: Copilot CLI, Claude Code, Cursor, OpenCode, Codex CLI, Gemini CLI, Antigravity CLI, Hermes, Kiro, Windsurf, JetBrains Copilot)"
             )
             return None
 

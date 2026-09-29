@@ -825,24 +825,29 @@ class MCPIntegrator:
                 fail_on_write_error=fail_on_write_error,
             )
 
+        clean_user_scope = user_scope or scope is InstallScope.USER
         if "cursor" in target_runtimes:
+            from apm_cli.adapters.client.cursor import CursorClientAdapter
+
             _clean_json_mcp_config(
-                project_root_path / ".cursor" / "mcp.json",
+                CursorClientAdapter.config_path_for(project_root_path, clean_user_scope),
                 expanded_stale,
                 logger,
-                ".cursor/mcp.json",
+                "Cursor MCP config",
                 use_rich=True,
                 fail_on_write_error=fail_on_write_error,
             )
 
-        # Clean opencode.json (only if .opencode/ directory exists)
+        # Project scope is opt-in; user scope uses ~/.config/opencode/.
         if "opencode" in target_runtimes:
-            if (project_root_path / ".opencode").is_dir():
+            if clean_user_scope or (project_root_path / ".opencode").is_dir():
+                from apm_cli.adapters.client.opencode import OpenCodeClientAdapter
+
                 _clean_json_mcp_config(
-                    project_root_path / "opencode.json",
+                    OpenCodeClientAdapter.config_path_for(project_root_path, clean_user_scope),
                     expanded_stale,
                     logger,
-                    "opencode.json",
+                    "OpenCode MCP config",
                     servers_key="mcp",
                     fail_on_write_error=fail_on_write_error,
                 )
