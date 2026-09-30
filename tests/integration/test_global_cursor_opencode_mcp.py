@@ -84,6 +84,37 @@ def test_global_package_install_and_uninstall_preserve_foreign_servers(tmp_path,
         assert "test-server" not in contents[key]
 
 
+def test_global_install_and_uninstall_keep_same_name_foreign_servers(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    project = tmp_path / "unmarked-project"
+    package = tmp_path / "package"
+    home.mkdir()
+    project.mkdir()
+    _write_package(package, "same-name-mcp-test", "test-server", "hello")
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.chdir(project)
+    # The user configured a server under the name the package declares.
+    configs = {
+        home / ".cursor" / "mcp.json": {"mcpServers": {"test-server": {"command": "mine"}}},
+        home / ".config" / "opencode" / "opencode.json": {
+            "mcp": {"test-server": {"type": "local", "command": ["mine"]}},
+        },
+    }
+    for config, contents in configs.items():
+        config.parent.mkdir(parents=True)
+        config.write_text(json.dumps(contents), encoding="utf-8")
+
+    runner = CliRunner()
+    for args in (
+        ["install", "--global", str(package), "--target", "cursor,opencode"],
+        ["uninstall", "--global", str(package)],
+    ):
+        result = runner.invoke(cli, args)
+        assert result.exit_code == 0, result.output
+        for config, contents in configs.items():
+            assert json.loads(config.read_text(encoding="utf-8")) == contents
+
+
 def test_packed_bundle_installs_global_skills_and_mcp_from_any_directory(tmp_path, monkeypatch):
     home = tmp_path / "home"
     package = tmp_path / "package"

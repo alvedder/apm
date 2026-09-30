@@ -24,7 +24,7 @@ Key differences from Copilot/Cursor:
 - Env key: ``environment`` (not ``env``)
 
 At project scope APM only writes to ``opencode.json`` when the
-``.opencode/`` directory already exists — OpenCode support is opt-in.
+``.opencode/`` directory already exists -- OpenCode support is opt-in.
 """
 
 import json
@@ -45,7 +45,7 @@ class OpenCodeClientAdapter(CopilotClientAdapter):
 
     supports_user_scope: bool = True
     target_name: str = "opencode"
-    mcp_servers_key: str = "mcpServers"
+    mcp_servers_key: str = "mcp"
 
     # OpenCode's config runtime-substitution support has not yet been
     # individually audited (see #1152). Pin to legacy install-time
@@ -107,6 +107,13 @@ class OpenCodeClientAdapter(CopilotClientAdapter):
                 return json.load(f)
         except (OSError, json.JSONDecodeError):
             return {}
+
+    def render_server_config(self, server_info: dict) -> dict:
+        """Render the ``mcp`` entry APM writes, for exact baseline comparisons."""
+        return self._to_opencode_format(
+            super().render_server_config(server_info),
+            enabled=opencode_enabled_value(server_info),
+        )
 
     def configure_mcp_server(
         self,

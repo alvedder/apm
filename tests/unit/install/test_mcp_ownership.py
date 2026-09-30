@@ -1,5 +1,7 @@
 """Tests for conservative legacy MCP ownership adoption."""
 
+import json
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -89,6 +91,42 @@ def test_legacy_adoption_requires_exact_native_baseline(
             stored_configs=stored,
             project_root=tmp_path,
             user_scope=False,
+        )
+
+    assert adopted == expected
+
+
+@pytest.mark.parametrize(
+    ("command", "expected"),
+    [
+        (["echo", "managed"], {"opencode": {"managed"}}),
+        (["user-edited", "managed"], {}),
+    ],
+)
+def test_legacy_adoption_compares_native_opencode_entries(tmp_path, command, expected) -> None:
+    """OpenCode baselines use the ``mcp`` entry shape APM writes."""
+    config = tmp_path / ".config" / "opencode" / "opencode.json"
+    config.parent.mkdir(parents=True)
+    entry = {"type": "local", "enabled": True, "command": command}
+    config.write_text(json.dumps({"mcp": {"managed": entry}}), encoding="utf-8")
+    stored = {
+        "managed": {
+            "name": "managed",
+            "registry": False,
+            "transport": "stdio",
+            "command": "echo",
+            "args": ["managed"],
+        }
+    }
+    with (
+        patch.object(Path, "home", return_value=tmp_path),
+        patch("apm_cli.factory.ClientFactory.supported_clients", return_value=["opencode"]),
+    ):
+        adopted = adopt_legacy_mcp_target_servers(
+            server_names={"managed"},
+            stored_configs=stored,
+            project_root=tmp_path,
+            user_scope=True,
         )
 
     assert adopted == expected
