@@ -97,6 +97,13 @@ class OpenCodeClientAdapter(CopilotClientAdapter):
         self._write_json_config(config_path, current_config)
         return True
 
+    def validate_config_for_install(self) -> bool:
+        """Refuse unsafe user configs even when no server write would be needed."""
+        return (
+            not self.user_scope
+            or self._read_json_config_for_update(Path(self.get_config_path())) is not None
+        )
+
     def get_current_config(self):
         """Read the current ``opencode.json`` contents."""
         config_path = self.get_config_path()

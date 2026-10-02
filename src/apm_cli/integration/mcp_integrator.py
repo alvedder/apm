@@ -1179,6 +1179,7 @@ class MCPIntegrator:
         user_scope: bool = False,
         logger=None,
         replace_existing: bool = False,
+        installed_servers: builtins.set[str] | None = None,
     ) -> bool:
         """Install MCP dependencies for a specific runtime.
 
@@ -1206,7 +1207,9 @@ class MCPIntegrator:
                     if result["failed"]:
                         logger.error(f"  Failed to install {dep}")
                         all_ok = False
-                    elif logger and runtime == "codex":
+                    elif result.get("installed") and installed_servers is not None:
+                        installed_servers.add(dep)
+                    if not result["failed"] and logger and runtime == "codex":
                         from apm_cli.factory import ClientFactory
 
                         config_path = ClientFactory.create_client(

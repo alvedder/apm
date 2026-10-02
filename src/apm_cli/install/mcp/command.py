@@ -257,6 +257,15 @@ def run_mcp_install(  # noqa: PLR0913
                     for target_name, server_names in old_target_servers.items()
                     if server_names & {mcp_name}
                 }
+                from ...integration.mcp_integrator_install import _validate_target_configs
+
+                _validate_target_configs(
+                    list(requested_target_servers),
+                    project_root=apm_dir,
+                    user_scope=user_scope,
+                    console=None,
+                    logger=logger,
+                )
                 # Legacy --runtime remains a direct override. Target values
                 # are projected through the shared decision below.
                 MCPIntegrator.install(
@@ -285,6 +294,19 @@ def run_mcp_install(  # noqa: PLR0913
                     target_name: set(server_names)
                     for target_name, server_names in old_target_servers.items()
                 }
+                for previous_target, server_names in old_target_servers.items():
+                    retired = (server_names & {mcp_name}) - requested_target_servers.get(
+                        previous_target, set()
+                    )
+                    if retired:
+                        MCPIntegrator.remove_stale(
+                            retired,
+                            runtime=previous_target,
+                            project_root=apm_dir,
+                            user_scope=user_scope,
+                            scope=scope,
+                            fail_on_write_error=True,
+                        )
                 for server_names in merged_target_servers.values():
                     server_names.discard(mcp_name)
                 for target_name, server_names in requested_target_servers.items():

@@ -399,6 +399,10 @@ class MCPClientAdapter(ABC):
         """Get the current MCP configuration."""
         pass
 
+    def validate_config_for_install(self) -> bool:
+        """Allow adapters to refuse unsafe configs before existing-server shortcuts."""
+        return True
+
     def _read_json_config_for_update(self, config_path: Path) -> dict | None:
         """Return the JSON object at *config_path* before a merge-and-write.
 
@@ -436,6 +440,13 @@ class MCPClientAdapter(ABC):
                 f"Could not parse {config_path} as a JSON object -- skipping config "
                 "write to avoid data loss (comments and trailing commas are not "
                 "preserved); fix the file or add this server manually",
+                symbol="warning",
+            )
+            return None
+        if self.mcp_servers_key in config and not isinstance(config[self.mcp_servers_key], dict):
+            _rich_warning(
+                f"Could not parse {config_path}: {self.mcp_servers_key} must be "
+                "a JSON object -- skipping config write to avoid data loss",
                 symbol="warning",
             )
             return None

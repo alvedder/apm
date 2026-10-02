@@ -97,17 +97,20 @@ def test_legacy_adoption_requires_exact_native_baseline(
 
 
 @pytest.mark.parametrize(
-    ("command", "expected"),
+    ("command", "enabled", "expected"),
     [
-        (["echo", "managed"], {"opencode": {"managed"}}),
-        (["user-edited", "managed"], {}),
+        (["echo", "managed"], True, {"opencode": {"managed"}}),
+        (["user-edited", "managed"], True, {}),
+        (["echo", "managed"], 1, {}),
     ],
 )
-def test_legacy_adoption_compares_native_opencode_entries(tmp_path, command, expected) -> None:
+def test_legacy_adoption_compares_native_opencode_entries(
+    tmp_path, command, enabled, expected
+) -> None:
     """OpenCode baselines use the ``mcp`` entry shape APM writes."""
     config = tmp_path / ".config" / "opencode" / "opencode.json"
     config.parent.mkdir(parents=True)
-    entry = {"type": "local", "enabled": True, "command": command}
+    entry = {"type": "local", "enabled": enabled, "command": command}
     config.write_text(json.dumps({"mcp": {"managed": entry}}), encoding="utf-8")
     stored = {
         "managed": {

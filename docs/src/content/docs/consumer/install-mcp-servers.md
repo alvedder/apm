@@ -171,7 +171,16 @@ value unchanged into that server's `opencode.json` entry. If omitted, APM keeps
 the existing `true` default. APM does not validate or coerce explicit values;
 OpenCode interprets them. Other targets ignore this OpenCode-only field.
 Reinstall applies changes to `enabled`, including its JSON type; removing
-the field restores `true`. OpenCode remains project-only.
+the field restores `true`.
+
+Global Cursor and OpenCode installs preserve personal servers, including names
+also declared by a package. Reinstall and pruning use per-target APM ownership;
+changing a direct `--mcp` target cleans the previously owned target before
+retiring its ownership record. If a user config is unreadable, contains JSONC,
+has a non-object server map, or uses a symlink below the home directory, APM
+warns and fails without rewriting it, even on a no-op reinstall. Fix the
+reported config and rerun the original command with `--global` and the same
+`--target` selection. A home-directory alias itself remains supported.
 
 ## How `targets:` gates which configs get written
 

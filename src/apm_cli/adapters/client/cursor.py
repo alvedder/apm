@@ -115,6 +115,13 @@ class CursorClientAdapter(CopilotClientAdapter):
     # Config read / write -- project scope never creates ``.cursor/``
     # ------------------------------------------------------------------ #
 
+    def validate_config_for_install(self) -> bool:
+        """Refuse unsafe user configs even when no server write would be needed."""
+        return (
+            not self.user_scope
+            or self._read_json_config_for_update(Path(self.get_config_path())) is not None
+        )
+
     def update_config(self, config_updates):
         """Merge *config_updates* into the ``mcpServers`` section.
 
