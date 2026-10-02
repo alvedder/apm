@@ -386,3 +386,51 @@ def test_global_mcp_accepts_home_alias(tmp_path: Path, apm_binary_path: Path, ta
     _write_root(scenario, [_server("probe")])
     assert scenario.run("install", "-g", "--target", target, "--no-policy").returncode == 0
     assert "probe" in _servers(scenario, target)
+
+
+@pytest.mark.parametrize("target", list(_TARGETS))
+@pytest.mark.skipif(os.name == "nt", reason="POSIX cleanup write-failure contract")
+def test_direct_retarget_cleanup_write_failure_can_be_repaired(
+    tmp_path: Path, apm_binary_path: Path, target: str
+) -> None:
+    """A late cleanup failure keeps both actual deployments owned through retry."""
+    scenario = _scenario(tmp_path, apm_binary_path)
+    foreign = {"command": ["mine"]}
+    for runtime in _TARGETS:
+        _seed(scenario, runtime, {"foreign": foreign})
+    command = (
+        "install",
+        "-g",
+        "--mcp",
+        "probe",
+        "--target",
+        target,
+        "--transport",
+        "stdio",
+        "--no-policy",
+        "--",
+        "printf",
+        "hello",
+    )
+    assert scenario.run(*command).returncode == 0
+    other = next(runtime for runtime in _TARGETS if runtime != target)
+    switched = tuple(other if argument == target else argument for argument in command)
+    parent = scenario.config(target).parent
+    old_mode = stat.S_IMODE(parent.stat().st_mode)
+    old_config = scenario.config(target).read_bytes()
+    parent.chmod(0o500)
+    try:
+        failed = scenario.run(*switched)
+    finally:
+        parent.chmod(old_mode)
+    assert failed.returncode != 0, failed.stdout + failed.stderr
+    assert scenario.config(target).read_bytes() == old_config
+    assert "probe" in _servers(scenario, other)
+    assert scenario.lock().mcp_target_servers == {target: ["probe"], other: ["probe"]}
+    assert scenario.run(*switched).returncode == 0
+    assert scenario.lock().mcp_target_servers == {other: ["probe"]}
+    assert "probe" not in _servers(scenario, target)
+    _write_root(scenario, [])
+    assert scenario.run("install", "-g", "--target", other, "--no-policy").returncode == 0
+    for runtime in _TARGETS:
+        assert _servers(scenario, runtime) == {"foreign": foreign}

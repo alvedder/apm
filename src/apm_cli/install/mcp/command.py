@@ -294,11 +294,27 @@ def run_mcp_install(  # noqa: PLR0913
                     target_name: set(server_names)
                     for target_name, server_names in old_target_servers.items()
                 }
-                for previous_target, server_names in old_target_servers.items():
-                    retired = (server_names & {mcp_name}) - requested_target_servers.get(
-                        previous_target, set()
+                for target_name, server_names in requested_target_servers.items():
+                    merged_target_servers.setdefault(target_name, set()).update(server_names)
+                retired_targets = {
+                    previous_target: {mcp_name}
+                    for previous_target, server_names in old_target_servers.items()
+                    if mcp_name in server_names
+                    and mcp_name not in requested_target_servers.get(previous_target, set())
+                }
+                if retired_targets:
+                    # Cleanup can fail after a destination write. Keep both deployments
+                    # durably owned until removal succeeds, so retry cannot orphan either.
+                    MCPIntegrator.update_lockfile(
+                        merged_names,
+                        _mcp_lock_path,
+                        mcp_configs=merged_configs,
+                        mcp_target_servers=merged_target_servers,
+                        mcp_config_provenance=merged_provenance,
+                        logger=logger,
+                        fail_on_write_error=True,
                     )
-                    if retired:
+                    for previous_target, retired in retired_targets.items():
                         MCPIntegrator.remove_stale(
                             retired,
                             runtime=previous_target,
@@ -307,10 +323,7 @@ def run_mcp_install(  # noqa: PLR0913
                             scope=scope,
                             fail_on_write_error=True,
                         )
-                for server_names in merged_target_servers.values():
-                    server_names.discard(mcp_name)
-                for target_name, server_names in requested_target_servers.items():
-                    merged_target_servers.setdefault(target_name, set()).update(server_names)
+                        merged_target_servers[previous_target].difference_update(retired)
                 MCPIntegrator.update_lockfile(
                     merged_names,
                     _mcp_lock_path,

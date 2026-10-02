@@ -65,6 +65,7 @@ Cursor and OpenCode user configs are `~/.cursor/mcp.json` and
 `~/.config/opencode/opencode.json`. Global MCP cleanup removes only names
 recorded as APM-owned for that target; personal same-name entries stay intact.
 Direct `--mcp` retargeting cleans the retired target before discarding ownership.
+If cleanup fails after a new-target write, both deployments stay owned for retry.
 Unsafe user configs fail even on reinstall: fix unreadable or non-object JSON,
 JSONC, or symlinks below the home directory, then rerun the original command
 with `--global` and the same `--target` selection.

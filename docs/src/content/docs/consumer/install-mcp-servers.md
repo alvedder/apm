@@ -181,6 +181,8 @@ has a non-object server map, or uses a symlink below the home directory, APM
 warns and fails without rewriting it, even on a no-op reinstall. Fix the
 reported config and rerun the original command with `--global` and the same
 `--target` selection. A home-directory alias itself remains supported.
+If retarget cleanup fails after the new target was written, both deployments
+remain recorded as APM-owned until a successful retry removes the old entry.
 
 ## How `targets:` gates which configs get written
 
