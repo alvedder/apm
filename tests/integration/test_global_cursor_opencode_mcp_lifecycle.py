@@ -123,10 +123,12 @@ def test_installed_global_prune_preserves_skipped_foreign_name(
     assert scenario.lock().mcp_target_servers == {target: ["managed"]}
     _write_root(scenario, [_server("foreign", "new-source-value"), _server("managed")])
     assert scenario.run(*install).returncode == 0
+    assert "foreign" in _servers(scenario, target)
     assert _servers(scenario, target)["foreign"] == foreign
     assert scenario.lock().mcp_target_servers == {target: ["managed"]}
     _write_root(scenario, [_server("managed")])
     assert scenario.run(*install).returncode == 0
+    assert "foreign" in _servers(scenario, target)
     assert _servers(scenario, target)["foreign"] == foreign
     assert scenario.lock().mcp_target_servers == {target: ["managed"]}
     _write_root(scenario, [])
@@ -295,6 +297,7 @@ def test_installed_global_package_update_prune_and_uninstall(
     dump_yaml(manifest, package.manifest_path)
     assert scenario.run("update", "-g", "--yes", "--target", target).returncode == 0
     servers = _servers(scenario, target)
+    assert "foreign" in servers
     assert servers["foreign"] == foreign
     assert "obsolete" not in servers
     assert (
