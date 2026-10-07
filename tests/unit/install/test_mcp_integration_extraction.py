@@ -133,6 +133,33 @@ class TestRunMcpIntegrationInstallBranch:
         assert stale_arg == {"io.github.acme/orphan-server"}
 
     @patch(_PATCH_TARGET)
+    def test_explicit_runtime_keeps_ownership_recorded_for_that_runtime(
+        self, mock_mcp, tmp_path: Path
+    ):
+        """--runtime vscode must not move VS Code ownership to the key the target decision names."""
+        name = "io.github.acme/server"
+        dep = MCPDependency(name=name, transport="stdio")
+        mock_mcp.deduplicate.side_effect = lambda x: x
+        mock_mcp.install.return_value = 1
+        mock_mcp.get_server_names.return_value = {name}
+        mock_mcp.get_server_configs.return_value = {}
+        mock_mcp.get_server_provenance.return_value = {}
+
+        run_mcp_integration(
+            **_base_kwargs(
+                mcp_deps=[dep],
+                old_mcp_servers={name},
+                old_mcp_target_servers={"vscode": {name}},
+                runtime="vscode",
+                target_decision=EffectiveTargetDecision("copilot", "apm config target"),
+                project_root=tmp_path,
+            )
+        )
+
+        assert mock_mcp.install.call_args.kwargs["managed_target_servers"] == {"vscode": {name}}
+        mock_mcp.remove_stale.assert_not_called()
+
+    @patch(_PATCH_TARGET)
     def test_forwards_apm_config_targets_key_when_declared(self, mock_mcp, tmp_path: Path):
         """#1335: only the targets-key the user actually declared is
         forwarded, matching the original inline block's behaviour."""

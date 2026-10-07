@@ -249,7 +249,12 @@ def run_mcp_integration(  # noqa: PLR0913
         if target_decision is not None:
             from apm_cli.install.mcp.ownership import migrate_legacy_project_target_servers
 
-            active_runtimes = target_decision.runtime_targets_for_scope(user_scope=user_scope)
+            # An explicit --runtime overrides the target decision, as in run_mcp_install.
+            active_runtimes = (
+                [runtime]
+                if runtime is not None
+                else target_decision.runtime_targets_for_scope(user_scope=user_scope)
+            )
             if active_runtimes is not None:
                 migrate_legacy_project_target_servers(
                     old_mcp_target_servers,
