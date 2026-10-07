@@ -95,6 +95,21 @@ def run_owned_mcp_integration(
     return count
 
 
+def _legacy_cleanup_runtimes(
+    *,
+    runtime: str | None,
+    target_decision: "EffectiveTargetDecision | None",
+) -> list[str | None]:
+    """Return the project runtimes a pre-ownership lockfile's stale servers are cleaned from."""
+    if runtime is not None:
+        return [runtime]
+    if target_decision is not None:
+        selected = target_decision.runtime_targets_for_scope(user_scope=False)
+        if selected:
+            return list(selected)
+    return [None]
+
+
 def run_mcp_integration(  # noqa: PLR0913
     *,
     apm_package: "APMPackage",
@@ -299,7 +314,20 @@ def run_mcp_integration(  # noqa: PLR0913
         # Remove stale MCP servers that are no longer needed
         stale_servers = old_mcp_servers - new_mcp_servers
         if stale_servers:
-            for cleanup_runtime, owned_servers in sorted(old_mcp_target_servers.items()):
+            cleanup_owners = {
+                target: builtins.set(servers) for target, servers in old_mcp_target_servers.items()
+            }
+            if not old_mcp_target_servers_present and not user_scope:
+                # A lockfile written before per-target ownership names no runtime for
+                # its servers, so a project install cleans the runtimes it targets,
+                # as those versions did. User scope stays ownership-only.
+                for legacy_runtime in _legacy_cleanup_runtimes(
+                    runtime=runtime, target_decision=target_decision
+                ):
+                    cleanup_owners.setdefault(legacy_runtime, builtins.set()).update(stale_servers)
+            for cleanup_runtime, owned_servers in sorted(
+                cleanup_owners.items(), key=lambda item: item[0] or ""
+            ):
                 scoped_stale = stale_servers.intersection(owned_servers)
                 if not scoped_stale:
                     continue
